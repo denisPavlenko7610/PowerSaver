@@ -60,6 +60,8 @@ public class PowerManager
                 // RunPowerCfg("/setdcvalueindex SCHEME_CURRENT SUB_SLEEP HYBRIDSLEEP 1");
                 // RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_SLEEP HYBRIDSLEEP 1");
 
+                RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_DISK DISKIDLE 60");
+
                 Console.WriteLine("[EnergySaver] Hard-mode energy-saving parameters applied.");
         }
     }
@@ -100,6 +102,8 @@ public class PowerManager
 
             // RunPowerCfg("/setdcvalueindex SCHEME_CURRENT SUB_SLEEP HYBRIDSLEEP 0");
             // RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_SLEEP HYBRIDSLEEP 0");
+            
+            RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_DISK DISKIDLE 1200");
 
             Console.WriteLine("[EnergySaver] Hard-mode parameters reverted.");
         }

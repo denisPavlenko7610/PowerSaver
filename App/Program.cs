@@ -6,7 +6,7 @@ namespace PowerSaver.App;
 class Program
 {
     static PowerMode mode = PowerMode.Hard; // Soft / Medium / Hard
-    private static int _idleMinutes = 1;
+    private static int _idleMinutes = 5;
 
     static bool isEco;
     static Timer checkTimer;
