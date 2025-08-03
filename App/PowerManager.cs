@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace PowerSaver.App;
 
@@ -20,10 +21,11 @@ public class PowerManager
     public void EnableEco(PowerMode mode)
     {
         SetScheme(_ecoGuid); // Always switch to Eco scheme
-
+        DisableDisplayTimeout(Guid.Parse(_ecoGuid));
+        
         if (mode == PowerMode.Medium || mode == PowerMode.Hard)
         {
-            _displayManager.SetRefreshRate(60); // Reduce refresh rate to 60 Hz
+            //_displayManager.SetRefreshRate(60); // Reduce refresh rate to 60 Hz
         }
 
         if (mode == PowerMode.Hard)
@@ -35,8 +37,8 @@ public class PowerManager
                 RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTENABLED 1");
 
                 // CPU throttling
-                RunPowerCfg("/setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMAX 50");
-                RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMAX 50");
+                RunPowerCfg("/setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMAX 20");
+                RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMAX 20");
                 RunPowerCfg("/setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 5");
                 RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 5");
 
@@ -108,6 +110,36 @@ public class PowerManager
             Console.WriteLine("[EnergySaver] Hard-mode parameters reverted.");
         }
     }
+    
+    private void DisableDisplayTimeout(Guid plan)
+    {
+        Guid videoSubgroup = new Guid("7516b95f-f776-4464-8c53-06167f40cc99");
+        Guid videoTimeout = new Guid("3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e");
+        Guid scheme = plan;
+
+        PowerWriteACValueIndex(IntPtr.Zero, ref scheme, ref videoSubgroup, ref videoTimeout, 0);
+        PowerWriteDCValueIndex(IntPtr.Zero, ref scheme, ref videoSubgroup, ref videoTimeout, 0);
+        PowerSetActiveScheme(IntPtr.Zero, ref scheme);
+    }
+    
+    [DllImport("powrprof.dll", SetLastError = true)]
+    private static extern uint PowerSetActiveScheme(IntPtr UserRootPowerKey, ref Guid SchemeGuid);
+    
+    [DllImport("powrprof.dll")]
+    private static extern uint PowerWriteACValueIndex(
+        IntPtr RootPowerKey,
+        ref Guid SchemeGuid,
+        ref Guid SubGroupOfPowerSettingsGuid,
+        ref Guid PowerSettingGuid,
+        uint AcValueIndex);
+
+    [DllImport("powrprof.dll")]
+    private static extern uint PowerWriteDCValueIndex(
+        IntPtr RootPowerKey,
+        ref Guid SchemeGuid,
+        ref Guid SubGroupOfPowerSettingsGuid,
+        ref Guid PowerSettingGuid,
+        uint DcValueIndex);
 
     // Change active power scheme
     private void SetScheme(string schemeGuid)

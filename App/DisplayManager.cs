@@ -89,7 +89,7 @@ namespace PowerSaver.App
         {
             if (_originalRefreshRate.HasValue)
             {
-                SetRefreshRate(_originalRefreshRate.Value);
+                //SetRefreshRate(_originalRefreshRate.Value);
                 _originalRefreshRate = null;
             }
         }
