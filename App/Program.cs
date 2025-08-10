@@ -6,15 +6,12 @@ namespace PowerSaver.App;
 class Program
 {
     private static int _idleMinutes = 5;
-
     static bool isEco;
     static Timer checkTimer;
+    static Timer powerUsageTimer;
     private static uint _idleThresholdMs => (uint)(_idleMinutes * 60 * 1000);
     private static double _checkIntervalMs = 1000; // check every second
     private static uint _lastIdle = 0;
-    
-    private static readonly Guid VIDEO_SUBGROUP = new Guid("7516b95f-f776-4464-8c53-06167f40cc99");
-    private static readonly Guid VIDEO_TIMEOUT = new Guid("3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e");
 
     static void Main()
     {
@@ -39,7 +36,6 @@ class Program
         {
             uint idle = IdleWatcher.GetIdleTime();
 
-            // --- Switch to Eco if idle
             if (idle > _idleThresholdMs && !isEco)
             {
                 Console.WriteLine($"Idle started at {DateTime.Now:T}. Idle time: {idle / 1000 / 60} min.");
@@ -48,7 +44,6 @@ class Program
                 Console.WriteLine($"Switched to Eco mode at {DateTime.Now:T}.");
             }
 
-            // --- Return to Performance if user is active again
             if (isEco && idle < _lastIdle)
             {
                 powerManager.DisableEco();
@@ -59,6 +54,10 @@ class Program
             _lastIdle = idle;
         };
         checkTimer.Start();
+
+        powerUsageTimer = new Timer(60000);
+        powerUsageTimer.Elapsed += (s, e) => powerManager.UpdatePowerUsage();
+        powerUsageTimer.Start();
 
         Console.ReadLine();
     }
