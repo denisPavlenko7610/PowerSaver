@@ -5,7 +5,6 @@ namespace PowerSaver.App;
 
 class Program
 {
-    static PowerMode mode = PowerMode.Hard; // Soft / Medium / Hard
     private static int _idleMinutes = 5;
 
     static bool isEco;
@@ -32,7 +31,7 @@ class Program
             displayManager
         );
 
-        Console.WriteLine($"Auto Power Saver started. Mode = {mode}");
+        Console.WriteLine($"Auto Power Saver started.");
         Console.WriteLine($"Idle threshold set to {_idleMinutes} minutes.");
 
         checkTimer = new Timer(_checkIntervalMs);
@@ -44,7 +43,7 @@ class Program
             if (idle > _idleThresholdMs && !isEco)
             {
                 Console.WriteLine($"Idle started at {DateTime.Now:T}. Idle time: {idle / 1000 / 60} min.");
-                powerManager.EnableEco(mode);
+                powerManager.EnableEco();
                 isEco = true;
                 Console.WriteLine($"Switched to Eco mode at {DateTime.Now:T}.");
             }
@@ -52,7 +51,7 @@ class Program
             // --- Return to Performance if user is active again
             if (isEco && idle < _lastIdle)
             {
-                powerManager.DisableEco(mode);
+                powerManager.DisableEco();
                 isEco = false;
                 Console.WriteLine($"Returned to Performance mode at {DateTime.Now:T}.");
             }
