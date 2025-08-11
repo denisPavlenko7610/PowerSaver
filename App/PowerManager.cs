@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Timers;
 using LibreHardwareMonitor.Hardware;
+using Timer = System.Timers.Timer;
 
 namespace PowerSaver.App;
 
@@ -11,8 +13,11 @@ public class PowerManager
     private readonly DisplayManager _displayManager;
 
     private DateTime? ecoStartTime;
-    private double lastMeasuredWattsPerf = 0;
-    private double lastMeasuredWattsEco = 0;
+    private double accumulatedSavedWh = 0;
+    private double lastPerfPower = 0;
+    private DateTime lastMeasurementTime;
+
+    private Timer powerTimer;
     private readonly Computer _computer;
 
     public PowerManager(string ecoGuid, string perfGuid, DisplayManager displayManager)
@@ -72,7 +77,10 @@ public class PowerManager
     public void EnableEco()
     {
         ecoStartTime = DateTime.Now;
-        lastMeasuredWattsPerf = UpdatePowerUsage();
+        accumulatedSavedWh = 0;
+
+        lastPerfPower = UpdatePowerUsage();
+
         SetScheme(_ecoGuid);
         DisableDisplayTimeout(Guid.Parse(_ecoGuid));
 
@@ -99,21 +107,45 @@ public class PowerManager
         RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_SYSTEMCOOLING POLICY 1");
 
         RunPowerCfg("/setacvalueindex SCHEME_CURRENT SUB_DISK DISKIDLE 60");
+
+        lastMeasurementTime = DateTime.Now;
+
+        powerTimer = new Timer(60000); // интервал 1 минута
+        powerTimer.Elapsed += OnPowerTimerElapsed;
+        powerTimer.AutoReset = true;
+        powerTimer.Start();
+    }
+
+    private void OnPowerTimerElapsed(object sender, ElapsedEventArgs e)
+    {
+        double currentEcoPower = UpdatePowerUsage();
+        DateTime now = DateTime.Now;
+        double deltaHours = (now - lastMeasurementTime).TotalHours;
+
+        double powerDiff = lastPerfPower - currentEcoPower;
+
+        if (powerDiff > 0)
+        {
+            accumulatedSavedWh += powerDiff * deltaHours;
+        }
+
+        lastMeasurementTime = now;
     }
 
     public void DisableEco()
     {
-        lastMeasuredWattsEco = UpdatePowerUsage();
+        powerTimer?.Stop();
+        powerTimer?.Dispose();
+        powerTimer = null;
+
         SetScheme(_perfGuid);
 
         if (ecoStartTime.HasValue)
         {
             var duration = DateTime.Now - ecoStartTime.Value;
-            double hours = duration.TotalHours;
-            double savedWh = (lastMeasuredWattsPerf - lastMeasuredWattsEco) * hours;
             ecoStartTime = null;
 
-            Console.WriteLine($"[EnergySaver] Saved approx: {savedWh:F2} Wh over {duration.TotalMinutes:F1} min.");
+            Console.WriteLine($"[EnergySaver] Saved approx: {accumulatedSavedWh:F2} Wh over {duration.TotalMinutes:F1} min.");
         }
 
         RunPowerCfg("/setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 0");
