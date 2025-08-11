@@ -6,11 +6,10 @@ namespace PowerSaver.App;
 class Program
 {
     private static int _idleMinutes = 5;
+
     static bool isEco;
     static Timer checkTimer;
-    static Timer powerUsageTimer;
     private static uint _idleThresholdMs => (uint)(_idleMinutes * 60 * 1000);
-    private static double _checkIntervalMs = 1000; // check every second
     private static uint _lastIdle = 0;
 
     static void Main()
@@ -30,13 +29,17 @@ class Program
 
         Console.WriteLine($"Auto Power Saver started.");
         Console.WriteLine($"Idle threshold set to {_idleMinutes} minutes.");
+        
+        var powerUsageTimer = new System.Timers.Timer(60000);
+        powerUsageTimer.Elapsed += (s, e) => powerManager.UpdatePowerUsage();
+        powerUsageTimer.Start();
 
-        checkTimer = new Timer(_checkIntervalMs);
+        checkTimer = new Timer(1000);
         checkTimer.Elapsed += (s, e) =>
         {
             uint idle = IdleWatcher.GetIdleTime();
 
-            if (idle > _idleThresholdMs && !isEco)
+            if (idle >= _idleThresholdMs && !isEco)
             {
                 Console.WriteLine($"Idle started at {DateTime.Now:T}. Idle time: {idle / 1000 / 60} min.");
                 powerManager.EnableEco();
@@ -54,10 +57,6 @@ class Program
             _lastIdle = idle;
         };
         checkTimer.Start();
-
-        powerUsageTimer = new Timer(60000);
-        powerUsageTimer.Elapsed += (s, e) => powerManager.UpdatePowerUsage();
-        powerUsageTimer.Start();
 
         Console.ReadLine();
     }
