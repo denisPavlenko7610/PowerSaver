@@ -26,9 +26,6 @@ class Program
             "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", // GUID Perf
             displayManager
         );
-
-        Console.WriteLine($"Auto Power Saver started.");
-        Console.WriteLine($"Idle threshold set to {_idleMinutes} minutes.");
         
         var powerUsageTimer = new System.Timers.Timer(60000);
         powerUsageTimer.Elapsed += (s, e) => powerManager.UpdatePowerUsage();
@@ -41,17 +38,15 @@ class Program
 
             if (idle >= _idleThresholdMs && !isEco)
             {
-                Console.WriteLine($"Idle started at {DateTime.Now:T}. Idle time: {idle / 1000 / 60} min.");
+                Console.WriteLine($"Eco mode started at {DateTime.Now:T}. Idle time: {idle / 1000 / 60} min.");
                 powerManager.EnableEco();
                 isEco = true;
-                Console.WriteLine($"Switched to Eco mode at {DateTime.Now:T}.");
             }
 
             if (isEco && idle < _lastIdle)
             {
                 powerManager.DisableEco();
                 isEco = false;
-                Console.WriteLine($"Returned to Performance mode at {DateTime.Now:T}.");
             }
 
             _lastIdle = idle;

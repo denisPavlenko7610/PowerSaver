@@ -13,8 +13,8 @@ public class PowerManager
     private readonly DisplayManager _displayManager;
 
     private DateTime? ecoStartTime;
-    private double accumulatedSavedWh = 0;
-    private double lastPerfPower = 0;
+    private double accumulatedSavedWh;
+    private double lastPerfPower;
     private DateTime lastMeasurementTime;
 
     private Timer powerTimer;
@@ -53,20 +53,20 @@ public class PowerManager
 
             foreach (var sensor in hw.Sensors)
             {
-                if (sensor.SensorType == SensorType.Power && sensor.Value.HasValue)
-                {
-                    if (hw.HardwareType == HardwareType.Cpu && sensor.Name.Contains("Package"))
-                        cpuPower += sensor.Value.Value;
-                    else if ((hw.HardwareType == HardwareType.GpuNvidia || hw.HardwareType == HardwareType.GpuAmd) &&
-                             sensor.Name.Contains("Power"))
-                        gpuPower += sensor.Value.Value;
-                    else if (hw.HardwareType == HardwareType.Memory)
-                        memoryPower += sensor.Value.Value;
-                    else if (hw.HardwareType == HardwareType.Storage)
-                        storagePower += sensor.Value.Value;
-                    else if (hw.HardwareType == HardwareType.Motherboard)
-                        motherboardPower += sensor.Value.Value;
-                }
+                if (sensor.SensorType != SensorType.Power || !sensor.Value.HasValue)
+                    continue;
+                
+                if (hw.HardwareType == HardwareType.Cpu && sensor.Name.Contains("Package"))
+                    cpuPower += sensor.Value.Value;
+                else if (hw.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd &&
+                         sensor.Name.Contains("Power"))
+                    gpuPower += sensor.Value.Value;
+                else if (hw.HardwareType == HardwareType.Memory)
+                    memoryPower += sensor.Value.Value;
+                else if (hw.HardwareType == HardwareType.Storage)
+                    storagePower += sensor.Value.Value;
+                else if (hw.HardwareType == HardwareType.Motherboard)
+                    motherboardPower += sensor.Value.Value;
             }
         }
 
@@ -110,7 +110,7 @@ public class PowerManager
 
         lastMeasurementTime = DateTime.Now;
 
-        powerTimer = new Timer(60000); // интервал 1 минута
+        powerTimer = new Timer(60000); // 1 min
         powerTimer.Elapsed += OnPowerTimerElapsed;
         powerTimer.AutoReset = true;
         powerTimer.Start();
@@ -134,8 +134,8 @@ public class PowerManager
 
     public void DisableEco()
     {
-        powerTimer?.Stop();
-        powerTimer?.Dispose();
+        powerTimer.Stop();
+        powerTimer.Dispose();
         powerTimer = null;
 
         SetScheme(_perfGuid);
@@ -145,7 +145,7 @@ public class PowerManager
             var duration = DateTime.Now - ecoStartTime.Value;
             ecoStartTime = null;
 
-            Console.WriteLine($"[EnergySaver] Saved approx: {accumulatedSavedWh:F2} Wh over {duration.TotalMinutes:F1} min.");
+            Console.WriteLine($"Performance mode at {DateTime.Now:T}. (Eco saved: {accumulatedSavedWh:F2} Wh over {duration.TotalMinutes:F1} min)");
         }
 
         RunPowerCfg("/setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 0");
